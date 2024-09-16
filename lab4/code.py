@@ -12,6 +12,7 @@ task1Data = df[df['updateTime'] == '2020-4-1']
 task1Confirmed = task1Data.groupby('provinceName')['city_confirmedCount'].sum()
 # print(task1Confirmed.keys())
 
+
 # 创建柱状图
 bar = (
     Bar()
@@ -30,8 +31,12 @@ bar = (
 # 任务二：对每日各省的累计确诊患者数量进行统计-------------------------------------------------
 timeline = Timeline()
 timeline2 = Timeline()
+# print(df['updateTime'].unique())
+time = list(df['updateTime'].unique())
+time.reverse()
+
 # 按照日期来进行类似task1的操作
-for date in df['updateTime'].unique():
+for date in time:
     df_daily = df[df['updateTime'] == date]
     daily_data = df_daily.groupby('provinceName')['city_confirmedCount'].sum()
     
