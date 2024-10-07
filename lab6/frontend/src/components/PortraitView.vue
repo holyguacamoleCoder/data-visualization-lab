@@ -1,45 +1,274 @@
 <template>
   <div id="portrait-view" style="display: flex; justify-content: space-around; height: 300px;">
-    <div id="radial-chart1" style="width: 30%;"></div>
-    <div id="radial-chart2" style="width: 30%;"></div>
-    <div id="radial-chart3" style="width: 30%;"></div>
+    <h3>Portrait View</h3>
+    <div class="vis-panel">
+      <div id="visualization0"></div>
+      <div id="visualization1"></div>
+      <div id="visualization2"></div>
+    </div>
+    <div class="labels">
+      <div id="label-bar"></div>
+      <div id="label-radar"></div>
+    </div>
   </div>
 </template>
 
 <script>
+import axios from 'axios'
 export default {
   name: 'PortraitView',
-  mounted() {
-    this.initRadialChart('radial-chart1');
-    this.initRadialChart('radial-chart2');
-    this.initRadialChart('radial-chart3');
+  data() {
+    return {
+      PortraitData: []
+    };
+  },
+  async mounted() {
+    this.getPortraitData()
   },
   methods: {
-    initRadialChart(id) {
-      var chart = this.$echarts.init(document.getElementById(id));
-      var option = {
-        series: [
-          {
-            type: 'pie',
-            radius: ['40%', '70%'],
-            label: {
-              show: false
-            },
-            data: [
-              { value: 40, name: 'Part 1' },
-              { value: 60, name: 'Part 2' }
-            ]
+    async getPortraitData() {
+      // 获取题目数据
+      try {
+        const response = await axios.get('http://localhost:5000/api/cluster', {
+          params: {
           }
-        ]
-      };
-      chart.setOption(option);
-    }
+        });
+        this.PortraitData = response.data;
+        console.log('PortraitData:', this.PortraitData);
+        this.renderPortraitData()
+        this.renderLabelBar()
+      } catch (error) {
+        console.error('Failed to fetch Portrait:', error);
+      }
+    },
+    renderPortraitData(){
+      console.log('renderPortraitData')
+      const d3 = this.$d3
+      // const clusterData = this.PortraitData[0]
+      let useData = []
+      for (let i = 0; i < 3; i++) {
+        useData.push(this.PortraitData[`${i}`])
+      }
+      console.log('useData:',useData)
+      const color = ['#ff7f00', '#377eb8', '#4daf4a', '#984ea3', '#e41a1c', '#ff7f00', '#377eb8', '#4daf4a', '#984ea3', '#e41a1c']
+      // console.log('color:',color)
+      // 渲染三种类型
+      useData.forEach((clusterData, i) => {
+
+        const data = Object.entries(clusterData).map((d, i) => {
+          return {
+            'knowledge': d[0], 
+            'value': d[1], 
+            'index': i
+          }
+        })
+        // console.log('data:',data)
+        const height = 350
+        const width = 350
+        const radius = Math.min(height, width) / 2
+        const innerRadius = 0.3 * radius
+        const outerRadius = 0.9 * radius
+        const center ={X: width / 2, Y: height / 2}
+        const svg = d3.select(`#visualization${i}`)
+          .append('svg')
+          .attr('width', height)
+          .attr('height', width)
+        const g = svg.append('g')
+          .attr('transform', `translate(${center.X}, ${center.Y})`)
+        // console.log('g:',g)
+        // 定义角度缩放尺
+        const angleX = d3.scaleBand()
+          .domain(data.map(d => d.knowledge))
+          .range([0, 2 * Math.PI])
+          .align(0)
+        // 定义半径缩放尺
+        const radiusY = d3.scaleLinear()
+        .domain([0, 1])
+        .range([innerRadius, outerRadius])
+        // 定义曲线生成器
+        const arc = d3.arc()
+            .innerRadius(innerRadius)
+            .outerRadius(d => radiusY(d.value))
+            .startAngle(d => angleX(d.knowledge))
+            .endAngle(d => angleX(d.knowledge) + angleX.bandwidth())
+            .padAngle(0.01)
+            .padRadius(innerRadius)
+        
+        // -----renderLabelRadar-------
+        const levels = 3
+        const opcityCircles = 0.01
+        const lradius = radius * 0.8
+        const axisGrid = g.append('g')
+          .attr('class', 'axis-grid')
+        // 绘制背景圆圈
+        axisGrid.selectAll('.levels')
+          .data(d3.range(1, levels + 1).reverse())
+          .enter()
+            .append('circle')
+            .attr('class', 'grid-circle')
+            .attr('r', d => d * (lradius / levels))
+            .style('fill', '#CDCDCD')
+            .style('stroke', '#CDCDCD')
+            .style('fill-opacity', opcityCircles)
+            .style('filter', 'url(#glow)')
+            .style('stroke-dasharray', '4, 4')
+      
+         // 文本标识每层分数
+         // 绘制直线从中心射向外围
+         const knowledge = Object.keys(this.PortraitData[0])
+         const axis = axisGrid.selectAll('.axis')
+            .data(knowledge)
+            .enter()
+            .append('g')
+            .attr('class', 'axis')
+         axis.append('line')
+            .attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', d => radiusY(0.8) * Math.sin(angleX(d)))
+            .attr('y2', d => -radiusY(0.8) * Math.cos(angleX(d)))
+            .attr('class', 'line')
+            .style('stroke', '#CDCDCD')
+            .style('stroke-width', '1px')
+            .style('stroke-dasharray', '4, 3')
+         // 绘制文本标签
+         axis.append('text')        
+                
+        
+        
+        
+        
+        
+        // 绘制每个知识点的柱状图
+        g.append('g')
+        .selectAll('path')
+        .data(data)
+        .join('g')
+        .append('path')
+          .attr('fill', `${color[i]}`)
+          .attr('d', arc)
+          .attr('stroke', 'black')
+          .attr('stroke-width', '2px')
+
+
+
+            
+      })// forEach-clusterData
+
+      //-------- 渲染标签radar-bar图-----------
+    },
+    renderLabelBar(){
+      const d3 = this.$d3
+      const height = 175
+      const width = height
+      const labelRadius = Math.min(height, width) / 3
+      const labelCenter ={X: width / 2, Y: height / 2}
+      const svg = d3.select('#label-bar')
+        .append('svg')
+        .attr('width', height)
+        .attr('height', width)
+        .attr('transform', `translate(${125 - width / 2},${250 - height / 2})`)
+      const labelG = svg.append('g')
+        .attr('class', 'label-bar')
+        .attr('transform', `translate(${labelCenter.X}, ${labelCenter.Y})`)
+      const labelData = []
+      const knowledge = Object.keys(this.PortraitData[0])
+      
+      const str = ['Mastery', 'of', 'knowledge']
+      labelG.selectAll('.label-bar')
+      .data(str)
+      .enter()
+      .append('g')
+      .append('text')
+        .attr('font-size', '0.7em')
+        .attr('text-anchor', 'middle')
+        .attr('transform', (d, i) => `translate(0, ${(i - 1) * 12})`)
+        .text(d => d)
+      // .style('width', 50)
+      // .style('height', 50)
+      // .html(`<p>Mastery</p>
+      //         <p>of</p> 
+      //         <p>knowledge</p>`)
+
+      // console.log('kno', knowledge)
+      const knowledgeNum = knowledge.length
+      for(let i = 0; i < knowledgeNum; i++){
+        labelData.push({r1: labelRadius * 0.8, r2: labelRadius, index:i})
+      }
+      const labelArc = d3.arc()
+        .innerRadius(d => d.r1)
+        .outerRadius(d => d.r2)
+        .startAngle(d => d.index * 2 * Math.PI / knowledgeNum)
+        .endAngle(d => (1 + d.index) * 2 * Math.PI / knowledgeNum)
+        .padAngle(0.04)
+        .padRadius(labelRadius * 0.8)
+
+      labelG.selectAll('.label-bar')
+      .data(labelData)
+      .enter()
+      .append('g')
+      .append('path')
+        .attr('fill', '#939393')
+        .attr('d', labelArc)
+      // 为标签圆打上知识点
+      labelG.selectAll('.label-bar')
+      .data(knowledge)
+      .enter()
+      .append('g')
+      .append('text')
+        .attr('transform', d => `translate(${labelArc.centroid({r1: labelRadius * 0.8, r2: labelRadius, index:knowledge.indexOf(d)})})`)
+        .attr('text-anchor', (d, i) => i > 3 ? 'end' : 'start')
+        .attr('font-size', '0.7em')
+        .text(d => d)
+    },
+
   }
 };
 </script>
 
-<style scoped>
+<style scoped lang="less">
 #portrait-view {
-  width: 100%;
+  width: 1300px;
+  height: 600px;
+  position: relative;
+  h3{
+    height: 20px;
+    width: inherit;
+    font-size: 20px;
+    padding: 0 10px 10px;
+    margin: 10px 5px;
+    border-bottom: 1px solid #ccc;
+  }
+  .vis-panel{
+    position: absolute;
+    top: 142px;
+    height: 540px;
+    left: 0;
+    width: 1150px;
+    [id^='visualization']{
+      width: 30%;
+      display: inline-block;
+      border:1px solid #ccc;
+    }
+  }
+  .labels{
+    height: 500px;
+    width: 250px;
+    z-index: 5;
+    top: 42px;
+    right: 0;
+    position: absolute;
+    background-color: palegreen;
+    margin: 10px 0;
+    .label-bar{
+      height: 240px;
+      width: 240px;
+      border: 1px solid #ccc;
+    }
+    .label-radar{
+      height: 240px;
+      width: 240px;
+      border: 1px solid #ccc;
+    }
+  }
 }
 </style>

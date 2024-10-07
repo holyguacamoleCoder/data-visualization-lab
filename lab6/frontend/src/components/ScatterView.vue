@@ -1,39 +1,162 @@
 <template>
-  <div id="scatter-chart" style="height: 300px;"></div>
+  <div id="scatter-chart" style="height: 300px;">
+    <h3>Parallel View</h3>
+    <div class="labels">
+      <div class="label" v-for="color, i in colors" :key="color">
+        cluster{{i}}
+        <div class="color-box" :style="{ backgroundColor: color }"></div>
+      </div>
+    </div>
+    <div id="visualization"></div>
+  </div>
 </template>
 
 <script>
+import axios from 'axios'
 export default {
   name: 'ScatterView',
-  mounted() {
-    this.initChart();
+  data(){
+    return {
+      clusterDate: [],
+      colors:['#ff7f00', '#377eb8', '#4daf4a']
+      // , '#984ea3', '#e41a1c', '#ff7f00', '#377eb8', '#4daf4a', '#984ea3', '#e41a1c']
+    }
+  },
+  async mounted() {
+    // this.getClusterData()
   },
   methods: {
-    initChart() {
-      var chart = this.$echarts.init(document.getElementById('scatter-chart'));
-      var option = {
-        xAxis: {},
-        yAxis: {},
-        series: [
-          {
-            symbolSize: 20,
-            data: [
-              [10, 8], [15, 11], [8, 5], // Cluster 1
-              [20, 10], [21, 15], [23, 18], // Cluster 2
-              [30, 22], [28, 24], [27, 25] // Cluster 3
-            ],
-            type: 'scatter'
+    async getClusterData() {
+      // 获取题目数据
+      try {
+        const response = await axios.get('http://localhost:5000/api/cluster', {
+          params: {
+            every: true
           }
-        ]
-      };
-      chart.setOption(option);
+        });
+        this.clusterData = response.data;
+        console.log('clusterData:', this.clusterData);
+        this.renderParallel()
+
+      } catch (error) {
+        console.error('Failed to fetch Portrait:', error);
+      }
+    },
+    renderParallel() {
+      const d3 = this.$d3
+      // 假设你已经从后端获取了数据，并且数据存储在 this.PortraitData 中
+      const data = []
+      const midData = Object.entries(this.clusterData).map((d) => {
+        return {
+          'stu_id': d[0], 
+          'cluster': d[1].cluster,
+          'knowledge': d[1].knowledge
+        }
+      })
+      midData.forEach((d) => {
+        // console.log('d:', d)
+        // data[i] = d
+        data.push(d)
+      })
+
+      // 定义基础数据
+      const height = 500
+      const width = 400
+      const margin = { top: 20, right: 20, bottom: 30, left: 40 }
+      const svg = d3.select("#visualization")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+      const g = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+      // 定义颜色
+      const color = this.colors
+      // 获取维度
+      const dimensions = Object.keys(data[0].knowledge)
+      // console.log('dimensions:', dimensions)
+      // 定义 分数线性比例尺
+      const scoreY = d3.scaleLinear()
+          .domain([0, 1])
+          .range([height - margin.top - margin.bottom, margin.top])
+      // 定义 维度点比例尺
+      const dimensionsX = d3.scalePoint()
+          .domain(dimensions)
+          .range([0, width - margin.right - margin.left])
+      // 定义线条生成器
+      const line = function(d){
+        return d3.line()(
+          dimensions.map(p => [dimensionsX(p), scoreY(d[p]) + margin.top])
+        )
+      } 
+      // 定义坐标轴
+      const yAxis = d3.axisLeft(scoreY)
+
+       // 绘制线
+      g.selectAll('.line')
+      .data(data)
+      .enter()
+      .append('path')
+      .attr('class', 'line')
+      .attr('d', d => line(d.knowledge))
+      .attr('fill', 'none')
+      .attr('stroke', d => color[d.cluster])
+      .attr('stroke-width', 1.5)
+      .attr('opacity', 0.8)
+         
+      // 绘制坐标轴
+      g.selectAll('.axis')
+      .data(dimensions)
+      .enter()
+      .append('g')
+      .attr('class', 'axis')
+      .attr('transform', d => `translate(${dimensionsX(d)}, ${margin.top})`)
+      .each(function() {
+        d3.select(this).call(yAxis)
+        // console.log(d)
+      })
+      // 添加标签
+      .append('text')
+        .attr('y', -9)
+        .style('text-anchor', 'middle')
+        .text(d => d)
+        .style('fill', 'black')
     }
   }
 };
 </script>
 
-<style scoped>
+<style scoped lang="less">
 #scatter-chart {
   width: 100%;
+  h3{
+    margin: 10px;
+    padding-left: 20px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ccc;
+  }
+  .labels{
+    width: inherit;
+    height: 20px;
+    margin-left: 30px; 
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: center;
+    .label{
+      flex: 1;
+      margin-right: 10px;
+      position: relative;
+      font-size:17px;
+      .color-box{
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #000;
+        top: 6px;
+        left: 67px;
+      }
+    }
+  }
 }
 </style>

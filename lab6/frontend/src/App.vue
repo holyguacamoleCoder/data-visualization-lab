@@ -1,5 +1,19 @@
 <template>
   <div class="app-container">
+  <div class="header">
+    <div class="title">
+      XD-stClusterVis
+    </div>
+    <div class="filter">
+      <span>Class:</span>
+      <van-dropdown-menu>
+        <van-dropdown-item v-model="selectedClasses" :options="classes" />
+      </van-dropdown-menu>
+    </div>
+      
+
+  </div>
+  <div class="body">
     <div class="main">
       <div class="top">
         <!-- A. Scatter View -->
@@ -34,6 +48,8 @@
     </div>
 
     </div> 
+  </div>
+
 </template>
 
 <script>
@@ -42,7 +58,6 @@ import PortraitView from './components/PortraitView.vue'
 import QuestionView from './components/QuestionView.vue'
 import WeekView from './components/WeekView.vue'
 import StudentView from './components/StudentView.vue'
-
 export default {
   components: {
     ScatterView,
@@ -50,6 +65,28 @@ export default {
     QuestionView,
     WeekView,
     StudentView
+  },
+  data() {
+    return {
+      selectedClasses: 2,
+      classes:[
+        {value: 1, text: 'Class 1'},
+        {value: 2, text: 'Class 2'},
+        {value: 3, text: 'Class 3'},
+        {value: 4, text: 'Class 4'},
+        {value: 5, text: 'Class 5'},
+        {value: 6, text: 'Class 6'},
+        {value: 7, text: 'Class 7'},
+        {value: 8, text: 'Class 8'},
+        {value: 9, text: 'Class 9'},
+        {value: 10, text: 'Class 10'},
+        {value: 11, text: 'Class 11'},
+        {value: 12, text: 'Class 12'},
+        {value: 13, text: 'Class 13'},
+        {value: 14, text: 'Class 14'},
+        {value: 15, text: 'Class 15'},
+      ]
+    }
   }
 };
 </script>
@@ -61,8 +98,37 @@ export default {
   box-sizing: border-box;
 }
 .app-container {
+
+.header{
   width: 2100px;
-  height: 1200px;
+  height: 50px;
+  background-color: #2a2a2a;
+  .title{
+    float: left;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    margin-left: 20px;
+    line-height: 50px;
+  }
+  .filter{
+    float: right;
+    margin-right: 20px;
+    margin-top: 10px;
+    width: 200px;
+    height: 30px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+    color: #000;
+    background-color: #fff;
+    background-color: #fff;
+    font-size: 16px;
+  }
+}
+.body {
+  width: 2100px;
+  height: 1230px;
   display: flex;
   .main{
     width: 1700px;
@@ -90,7 +156,7 @@ export default {
       height: 600px;
       display: flex;
       .question-view{
-        width: 700px;
+        width: 800px;
         height: inherit;
       }
       .week-view{
@@ -107,5 +173,5 @@ export default {
   }
 }
 
-
+} //app-container
 </style>

@@ -1,5 +1,5 @@
 # 取消对巨量数据的提交
-/lab*/data/*
+lab*/data/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
