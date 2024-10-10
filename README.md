@@ -5,13 +5,21 @@
 
 文件夹树说明:
 data-visualization-lab
+
 ├─lab2：实验 2 文件夹
+
 │ ├─src:问题描述图片存储文件夹
+
 │ │ ├─example.png
+
 │ │ └─example2.png
+
 │ ├─code.py：实验代码，可能不止一个
+
 │ ├─data.csv：实验数据，可能不存在
+
 │ ├─problem.md：实验问题描述
+
 │ └─result.html：实验结果 html 文件，名字可能呢不一样
 
 

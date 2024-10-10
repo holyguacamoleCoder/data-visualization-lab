@@ -18,7 +18,8 @@
     "less-loader": "^12.2.0",
     "simplebar-vue": "^2.3.5",
     "vant": "^4.9.6",
-    "vue": "^3.2.13"
+    "vue": "^3.2.13",
+    "vuex": "^4.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",

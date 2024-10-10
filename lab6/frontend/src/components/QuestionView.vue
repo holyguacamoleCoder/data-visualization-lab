@@ -1,6 +1,9 @@
 <template>
   <div id="question-view" style="padding: 10px;">
-    <div class="title">Question View</div>
+    <div class="title">
+      <span>Question View</span>
+      <div class="filter">Knowledge: All</div>
+    </div>
     <!-- <div class="knowledge-panel" v-for="knowledge,index in QuestionData" :key="index">
       <text>{{ knowledge[0].knowledge }}</text>
       <div class="title-panel" v-for="title in knowledge" :key="title.id">
@@ -9,14 +12,14 @@
         <div class="distribution-chart"></div>
       </div>
     </div> -->
-    <Simplebar style="height: 500px">
+    <Simplebar style="height: 550px">
       <div id="visualizationQ"></div>
     </Simplebar>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
+import { getQuestions } from '@/api/QuestionView'
 import Simplebar from 'simplebar-vue'
 import 'simplebar-vue/dist/simplebar.min.css'
 export default {
@@ -30,30 +33,21 @@ export default {
     };
   },
   async mounted() {
-    // this.getQuestionData()
+    this.getQuestionData()
   },
   methods: {
     async getQuestionData() {
-      // 获取题目数据
-      try {
-        const response = await axios.get('http://localhost:5000/api/questions', {
-          params: {
-          }
-        });
-        this.QuestionData = response.data;
-        console.log('QuestionData:', this.QuestionData);
-        this.renderQuestion()
-
-      } catch (error) {
-        console.error('Failed to fetch questions:', error);
-      }
+      // 获取问题数据
+      const { data } = await getQuestions()
+      this.QuestionData = data
+      this.renderQuestion()
     },
     // 渲染题目视图数据
     renderQuestion(){
       const d3 = this.$d3
       const width = 650
-      const height = 1200
-      const margin = { top: 25, right: 20, bottom: 20, left: 20 }
+      const height = 1300
+      const margin = { top: 30, right: 20, bottom: 20, left: 20 }
       const innerWidth = width - margin.left - margin.right
       const innerHeight = height - margin.top - margin.bottom
       const timelineHeight = 50
@@ -62,6 +56,8 @@ export default {
       console.log(innerHeight, innerWidth)
       // 获取可视化目标容器
       const main = d3.select('#visualizationQ')
+      .attr('width', width)
+      .attr('height', height)
       // 给容器添加组
       const g = main.append('g')
           .attr('transform', `translate(${margin.left}, ${margin.top})`)
@@ -203,7 +199,7 @@ export default {
       // const color = {0: '#3b82f6', 1: '#f97316', 2: '#10b981', 3: '#8b5cf6', 4:'#ef4444'}
       let currentWidth = 0
       // 绘制分数
-      scoreG.append('text').text(d => d.score)
+      scoreG.append('text').text(d => d.percentage != 0 ? d.score : '')
       .attr('x', d => {
         const width = xScale(d.percentage)
         currentWidth += width
@@ -234,19 +230,29 @@ export default {
 
 <style scoped lang="less">
 #question-view {
+  height: 620px;
   background-color: #fff;
   padding: 20px;
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   .title {
-    font-size: 17px;
-    font-weight: bold;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-    padding-left: 10px;
     border-bottom: 1px solid #ccc;
+    padding-bottom: 7px;
+    span{
+      font-size: 17px;
+      font-weight:    bold;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      padding-left: 10px;
+    }
+    .filter{
+      float: right;
+      font-weight:    bold;
+      font-size: 17px;
+      padding-right: 10px;
+    }
   }
-  .question {
+    .question {
     margin-bottom: 20px;
     .progress {
       background-color: #f5f5f5;

@@ -1,5 +1,5 @@
 <template>
-  <div id="portrait-view" style="display: flex; justify-content: space-around; height: 300px;">
+  <div id="portrait-view" style="display: flex; justify-content: space-around;">
     <h3>Portrait View</h3>
     <div class="vis-panel">
       <div id="visualization0"></div>
@@ -8,13 +8,12 @@
     </div>
     <div class="labels">
       <div id="label-bar"></div>
-      <div id="label-radar"></div>
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
+import { getClusters } from '@/api/PortraitView'
 export default {
   name: 'PortraitView',
   data() {
@@ -27,19 +26,12 @@ export default {
   },
   methods: {
     async getPortraitData() {
-      // 获取题目数据
-      try {
-        const response = await axios.get('http://localhost:5000/api/cluster', {
-          params: {
-          }
-        });
-        this.PortraitData = response.data;
-        console.log('PortraitData:', this.PortraitData);
-        this.renderPortraitData()
-        this.renderLabelBar()
-      } catch (error) {
-        console.error('Failed to fetch Portrait:', error);
-      }
+      // 获取聚类中心数据
+      console.log('getPortraitData')
+      const { data } = await getClusters()
+      this.PortraitData = data
+      this.renderPortraitData()
+      this.renderLabelBar()
     },
     renderPortraitData(){
       console.log('renderPortraitData')
@@ -63,8 +55,8 @@ export default {
           }
         })
         // console.log('data:',data)
-        const height = 350
-        const width = 350
+        const height = 375
+        const width = 375
         const radius = Math.min(height, width) / 2
         const innerRadius = 0.3 * radius
         const outerRadius = 0.9 * radius
@@ -134,10 +126,6 @@ export default {
          axis.append('text')        
                 
         
-        
-        
-        
-        
         // 绘制每个知识点的柱状图
         g.append('g')
         .selectAll('path')
@@ -158,7 +146,7 @@ export default {
     },
     renderLabelBar(){
       const d3 = this.$d3
-      const height = 175
+      const height = 165
       const width = height
       const labelRadius = Math.min(height, width) / 3
       const labelCenter ={X: width / 2, Y: height / 2}
@@ -166,7 +154,7 @@ export default {
         .append('svg')
         .attr('width', height)
         .attr('height', width)
-        .attr('transform', `translate(${125 - width / 2},${250 - height / 2})`)
+        .attr('transform', `translate(${5},${220 - height / 2})`)
       const labelG = svg.append('g')
         .attr('class', 'label-bar')
         .attr('transform', `translate(${labelCenter.X}, ${labelCenter.Y})`)
@@ -227,9 +215,12 @@ export default {
 
 <style scoped lang="less">
 #portrait-view {
-  width: 1300px;
-  height: 600px;
+  width: 1290px;
+  height: 585px;
+  margin-left: 6px;
   position: relative;
+  border-radius: 5px;
+  background-color: #fff;
   h3{
     height: 20px;
     width: inherit;
@@ -240,24 +231,26 @@ export default {
   }
   .vis-panel{
     position: absolute;
-    top: 142px;
-    height: 540px;
+    top: 45px;
+    height: 450px;
     left: 0;
-    width: 1150px;
+    width: 1100px;
+    margin-top: 45px;
+    margin-left: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     [id^='visualization']{
-      width: 30%;
+      width: 33%;
+      padding-top: 55px;
       display: inline-block;
-      border:1px solid #ccc;
     }
   }
   .labels{
     height: 500px;
-    width: 250px;
+    width: 175px;
     z-index: 5;
     top: 42px;
     right: 0;
     position: absolute;
-    background-color: palegreen;
     margin: 10px 0;
     .label-bar{
       height: 240px;

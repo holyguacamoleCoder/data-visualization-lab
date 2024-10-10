@@ -1,6 +1,8 @@
 <template>
-  <div id="scatter-chart" style="height: 300px;">
-    <h3>Parallel View</h3>
+  <div id="scatter-chart">
+    <div class="title">
+      <span>Parallel View</span>
+    </div>
     <div class="labels">
       <div class="label" v-for="color, i in colors" :key="color">
         cluster{{i}}
@@ -12,41 +14,32 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { mapGetters } from 'vuex'
 export default {
   name: 'ScatterView',
   data(){
     return {
-      clusterDate: [],
+      // clusterData: [],
       colors:['#ff7f00', '#377eb8', '#4daf4a']
       // , '#984ea3', '#e41a1c', '#ff7f00', '#377eb8', '#4daf4a', '#984ea3', '#e41a1c']
     }
   },
   async mounted() {
-    // this.getClusterData()
+    this.renderParallel()
+  },
+  computed: {
+    ...mapGetters(['getClusterData']),
+    clusterData() {
+      return this.getClusterData
+    }
   },
   methods: {
-    async getClusterData() {
-      // 获取题目数据
-      try {
-        const response = await axios.get('http://localhost:5000/api/cluster', {
-          params: {
-            every: true
-          }
-        });
-        this.clusterData = response.data;
-        console.log('clusterData:', this.clusterData);
-        this.renderParallel()
-
-      } catch (error) {
-        console.error('Failed to fetch Portrait:', error);
-      }
-    },
-    renderParallel() {
+    
+    async renderParallel() {
       const d3 = this.$d3
       // 假设你已经从后端获取了数据，并且数据存储在 this.PortraitData 中
       const data = []
-      const midData = Object.entries(this.clusterData).map((d) => {
+      const midData = await Object.entries(this.clusterData).map((d) => {
         return {
           'stu_id': d[0], 
           'cluster': d[1].cluster,
@@ -60,9 +53,9 @@ export default {
       })
 
       // 定义基础数据
-      const height = 500
-      const width = 400
-      const margin = { top: 20, right: 20, bottom: 30, left: 40 }
+      const height = 450
+      const width = 350
+      const margin = { top: 25, right: 10, bottom: 30, left: 30 }
       const svg = d3.select("#visualization")
           .append("svg")
           .attr("width", width)
@@ -128,11 +121,20 @@ export default {
 <style scoped lang="less">
 #scatter-chart {
   width: 100%;
-  h3{
-    margin: 10px;
+  height: 585px;
+  border-radius: 5px;
+  background-color: #fff;
+  .title{
+    border-bottom: 1px solid #ccc; 
+    width: 100%;
     padding-left: 20px;
+    padding-top: 10px;
     padding-bottom: 5px;
-    border-bottom: 1px solid #ccc;
+    margin-bottom: 5px;
+    span{
+      font-size: 20px;
+      font-weight: bold;
+    }
   }
   .labels{
     width: inherit;
@@ -145,6 +147,7 @@ export default {
     .label{
       flex: 1;
       margin-right: 10px;
+      margin-top: 5px;
       position: relative;
       font-size:17px;
       .color-box{
@@ -157,6 +160,12 @@ export default {
         left: 67px;
       }
     }
+  }
+  #visualization {
+    border: 1px solid #ccc;
+    margin: 20px;
+    padding: 0 20px 20px 0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   }
 }
 </style>

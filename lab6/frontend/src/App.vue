@@ -5,10 +5,11 @@
       XD-stClusterVis
     </div>
     <div class="filter">
-      <span>Class:</span>
-      <van-dropdown-menu>
+      <span>Class:  </span>
+      <div class="num">1</div>
+      <!-- <van-dropdown-menu>
         <van-dropdown-item v-model="selectedClasses" :options="classes" />
-      </van-dropdown-menu>
+      </van-dropdown-menu> -->
     </div>
       
 
@@ -17,12 +18,12 @@
     <div class="main">
       <div class="top">
         <!-- A. Scatter View -->
-        <div class="scatter-view">
+        <div class="scatter-view" v-if="clusterData">
           <ScatterView />
         </div>
         
         <!-- B. Portrait View -->
-        <div class="portrait-view">
+        <div class="portrait-view" >
           <PortraitView />
         </div>
       </div>
@@ -34,7 +35,7 @@
         </div>
         
         <!-- D. Question Tooltip -->
-        <div class="week-view">
+        <div class="week-view" v-if="JustClusterData">
           <WeekView />
         </div>
       </div>
@@ -42,7 +43,7 @@
 
     <!-- E. Student View -->
     <div class="panel">
-       <div class="student-view">
+       <div class="student-view" v-if="JustClusterData">
          <StudentView />
        </div>
     </div>
@@ -58,6 +59,7 @@ import PortraitView from './components/PortraitView.vue'
 import QuestionView from './components/QuestionView.vue'
 import WeekView from './components/WeekView.vue'
 import StudentView from './components/StudentView.vue'
+import { mapActions, mapGetters } from 'vuex'
 export default {
   components: {
     ScatterView,
@@ -87,6 +89,21 @@ export default {
         {value: 15, text: 'Class 15'},
       ]
     }
+  },
+  computed: {
+    ...mapGetters(['getClusterData', 'getJustClusterData']),
+    clusterData(){
+      return this.$store.state.clusterData
+    },
+    JustClusterData(){
+      return this.$store.state.justClusterData
+    }
+  },
+  created() {
+    this.fetchClusterData()
+  },
+  methods: {
+    ...mapActions(['fetchClusterData'])
   }
 };
 </script>
@@ -98,7 +115,8 @@ export default {
   box-sizing: border-box;
 }
 .app-container {
-
+  width: 2100px;
+  background-color: #ccc;
 .header{
   width: 2100px;
   height: 50px;
@@ -115,15 +133,18 @@ export default {
     float: right;
     margin-right: 20px;
     margin-top: 10px;
-    width: 200px;
+    width: 170px;
     height: 30px;
-    border-radius: 5px;
     border: none;
     outline: none;
-    color: #000;
-    background-color: #fff;
-    background-color: #fff;
-    font-size: 16px;
+    color: #fff;
+    font-size: 20px;
+    .num{
+      float: right;
+      text-align: center;
+      width:100px;
+      border-bottom: 1px solid #fff;
+    }
   }
 }
 .body {
@@ -133,7 +154,6 @@ export default {
   .main{
     width: 1700px;
     height: inherit;
-    background-color: blue;
     display: flex;
     flex-direction: column;
     .top{
@@ -141,35 +161,33 @@ export default {
       height: 600px;
       display: flex;
       .scatter-view{
-        width: 500px;
+        width: 400px;
+        height: 600px;
         height: inherit;
-        background-color: yellow;
       }
       .portrait-view{
-        width: 1400px;
-        height: inherit;
-        background-color: green;
+        width: 1300px;
+        height: 600px;
       }
     }
     .bottom{
       width: inherit;
-      height: 600px;
+      height: 620px;
       display: flex;
       .question-view{
-        width: 800px;
-        height: inherit;
+        width: 675px;
+        height: 600px;
       }
       .week-view{
-        width: 1200px;
-        height: inherit;
-        background-color: orange;
+        margin-left: 5px;
+        width: 1015px;
+        height: 600px;
       }
     }
   }
   .panel{
     width: 400px;
     height: inherit;
-    background-color: red;
   }
 }
 

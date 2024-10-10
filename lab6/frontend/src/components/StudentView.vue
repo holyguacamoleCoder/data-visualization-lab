@@ -1,17 +1,17 @@
 <template>
   <div class="scrollBarWrap" id="student-view" data-simplebar>
-    <div class="title">Student View</div>
+    <div class="title">
+      <span>Student View</span>
+      <div class="filter">Limit: 4</div>
+    </div>
     <Simplebar style="height: 1170px">
-      <div ref="studentContainer" class="student" v-for="item, index in treeData['children']" :key="index" >
-        <p>{{item['name']}}</p>
-        <div ref="studentChart" class="chart" ></div>
-      </div>
+      <div id="visualizationS"></div>
     </Simplebar>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
+import { getStudents } from '@/api/StudentView'
 import Simplebar from 'simplebar-vue'
 import 'simplebar-vue/dist/simplebar.min.css'
 export default {
@@ -21,66 +21,57 @@ export default {
   },
   data() {
     return {
-      submissions: [],
       treeData: [],
+      currentCluster: null,
+      colors:['#ff7f00', '#377eb8', '#4daf4a'],
+    }
+  },
+  computed: {
+    JustClusterData(){
+      return this.$store.state.justClusterData
     }
   },
   async created(){
+    this.getTreeData()
   },
   async mounted() {
-    // this.fetchTreeData()
-    // this.renderTree()
-    // this.renderEveryStudents()
   },
   updated() {
-    console.log(this.$refs.studentContainer)
+    // console.log(this.$refs.studentContainer)
   },
   methods: {
-    async fetchTreeData() {
-      try {
-        const response = await axios.get('http://localhost:5000/api/tree_data', {
-          params: {
-            limit: 10,
-          }
-        });
-        this.treeData = response.data;
-        // console.log('TreeData:', this.treeData);
-        this.renderEveryStudents()
-      } catch (error) {
-        console.error('Failed to fetch treeData:', error);
-      }
+    async getTreeData() {
+      // 获取学生树形数据
+      const { data: { children } }  = await getStudents()
+      // console.log('data',children)
+      this.treeData = children
+      this.renderEveryStudents()
     },
 
-    renderTree(tree_data){
+    renderQuestions(Questions, sg){
       // console.log('renderTree')
-      if(!tree_data || tree_data['children'].length === 0) return
-      // 创建svg画布
-      this.$nextTick(() =>{
+      if(!Questions || Questions.length === 0) return
 
-      // console.log(this.$refs.studentContainer)
-      this.$refs.studentContainer.forEach((chart) => {
-        const svgChart = chart.childNodes[1]
-        // console.log(svgChart)
-        // 渲染函数
-        const lineLength = 100
-        const svg = this.$d3.select(svgChart).append('svg')
-        .attr('width', 390)
-        .attr('height', 70 )
-        const g = svg.append('g').attr('transform', 'translate(80, 0)')
-        const radius = 5
-        // 渲染函数
-        const render = (tree) => {
+      const d3 = this.$d3
+      const lineLength = 100
+      const radius = 5
+      const treeWidth = 75
+      const currentColor = this.colors[this.currentCluster]
+      const studentTitleHeight = 30
+
+      
+      // 渲染函数
+      const render = (g, tree) => {
         g.selectAll('path').data(tree.links()).join('path')
         .attr('fill', 'none')
-        .attr('stroke', 'black')
-        .attr('d', this.$d3.linkHorizontal().x(d => d.y).y(d => d.x))
+        .attr('stroke', `${currentColor}`)
+        .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x))
         // 树的连接线
         g.selectAll('line').data(tree.descendants()).join('line')
         .attr('x1', 0)
         .attr('x2', 50)
         .attr('y1', 20)
         .attr('y2', 20)
-        .attr('fill', '#000')
          // 此次提交分数
          g.selectAll('.base-line').data(tree.descendants()).join('rect')
         .attr('class', 'base-line')
@@ -88,16 +79,16 @@ export default {
         .attr('y', d => d.x - radius / 2 + 1)
         .attr('width', d => d.children ? 0 : lineLength)
         .attr('height', 3)
-        .attr('fill', '#237CAF')
+        .attr('fill', `${currentColor}`)
+        .attr('opacity', 0.5)
         .attr('rx', 2)
         .attr('ry', 2)
         // 节点
         g.selectAll('circle').data(tree.descendants()).join('circle')
-        .attr('cx', d => d.y + d.data.times * 10)
+        .attr('cx', d => d.y + d.data.times * 8)
         .attr('cy', d => d.x)
         .attr('r', radius)
-        .attr('fill', 'red')
-        .attr('stroke', 'black')
+        .attr('fill', `${currentColor}`)
         // 题目提交状态
         g.selectAll('text').data(tree.descendants()).join('text')
         .attr('x', d => d.y + (d.children ? -radius - 1 : radius + 5))
@@ -112,41 +103,79 @@ export default {
         .attr('y', d => d.x - radius / 2)
         .attr('width', d => (d.data.value ? d.data.value : 0) * 10) // 假设 values 是数值类型
         .attr('height', 5)
-        .attr('fill', '#237CAF')
+        .attr('fill', `${currentColor}`)
         .attr('rx', 2)
         .attr('ry', 2)
       }
-      
-      
-      // 处理json数据，计算树的高度
-      const root = this.$d3.hierarchy(tree_data)
-      // 定义一个树形布局,并映射为具体位置
-      const tree = this.$d3.tree()
-                  .size([70, 70])(root)
-      // console.log(tree)
-      // 渲染
-      render(tree)
 
-    })// 循环每个学生
-  })//nextTick
+      // 为每棵树创建一个g------------------------
+      const margin = { top: 20, right: 20, bottom: 20, left: 100 }
+      Questions.forEach((q, i) => {
+        // 为每棵树定义一个组
+        console.log('q',q)
+        q.name = q.name.slice(-5)
+        const qg = sg.append('g')
+        .attr('transform', `translate(${margin.left}, ${treeWidth * i + studentTitleHeight})`)
+        
+        const root = d3.hierarchy(q)
+        // 定义一个树形布局,并映射为具体位置
+        const tree = d3.tree()
+              .size([70, 70])(root)
+        render(qg,tree)
+      })
+      
 
     },
 
     renderEveryStudents(){
-      console.log('renderEveryStudents')
-      var student = this.treeData.children[0]
-      console.log(student)
+      // console.log('renderEveryStudents')
+      const d3 = this.$d3
+      const titleHeight = 20
+      const width = 390
+      const height = 100
+      const studentTitleHeight = 20
+      const treeWidth = 80
+      const margin = { top: 20, right: 20, bottom: 20, left: 20 }
+      const svg = d3.select('#visualizationS')
+        .attr('width', width)
+        .attr('height', height)
 
-      var renderQuestions = (student) => {
-        student.children.forEach((elem) => {
-          var question = elem
-          // console.log(question)
-          question.name = question.name.slice(-5)
-          this.renderTree(question)
-        })
-      }
+      const g = svg.append('g')
+        .attr('transform', `translate(${margin.left}, ${margin.top + titleHeight})`)
+      
+      // 对应了1个学生
+      this.treeData.length = 2
+      this.treeData.forEach((s) => {
+        // console.log('s',s)
+        this.currentCluster = this.JustClusterData[s.name]
+        // console.log('this.currentCluster',this.currentCluster)
+        // 创建学生画布
+        const studentPanelHeight = studentTitleHeight + treeWidth * s.children.length
+        const studentPanel = g.append('svg')
+            .attr('class', 'student-panel')
+            .attr('width', width - margin.left - margin.right)
+            .attr('height', studentPanelHeight)
+            .attr('x', '60')
+            .attr('y', (d, i) => i * studentPanelHeight + studentTitleHeight)
+            .style('box-shadow', '0 0 10px rgba(0, 0, 0, 0.1)')
+        const sg = studentPanel.append('g')
+              .attr('transform', `translate(${margin.left}, ${studentTitleHeight})`)
+        // 给每个学生打上标签
+        sg.append('text')
+          .attr('x', 10)
+          .attr('y', 10)
+          .text('Student-' + s.name)
+          .attr('font-size', '17px')
+          .attr('font-weight', 'bold')
+          .attr('text-anchor', 'start') 
+        
+        // 遍历这个s的所有问题
+        const Questions = s.children
+        console.log('Questions',Questions)
+        // 每个问题对应一棵树，我们渲染它 
+        this.renderQuestions(Questions, sg)
+      }) // forEach-s
 
-      renderQuestions(student)
     }
   }// methods
 };
@@ -154,9 +183,10 @@ export default {
 
 <style scoped lang="less">
 #student-view {
-  width: 400px;
-  height: 1200px;
- 
+  width: 395px;
+  height: 1220px;
+  border-radius: 5px;
+  background-color: #fff;
   .title{
     font-size: 20px;
     font-weight: bold;
@@ -165,20 +195,15 @@ export default {
     padding: 5px;
     padding-top: 0;
     border-bottom: 1px solid #ccc;
-  }
- 
-    .student{
-      width: 345px;
-      height: auto;
-      margin-left: 20px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      background-color: #fff;
-      p{
-        margin-left: 10px; 
-      }
+    .filter{
+      float: right;
+      margin-right:5px;
     }
+  }
+  .student-panel{
+    transform: translate(60px, 0);
+    box-shadow:0 0 10px rgba(0, 0, 0, 0.1);
+  }
 }
 /deep/ .simplebar-vertical {
   width: 16px;

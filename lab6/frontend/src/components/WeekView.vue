@@ -1,43 +1,47 @@
 <template>
-  <div id="week-view" style="height: 400px;">
-    <h3>Week View</h3>
-    <Simplebar style="height: 500px">
+  <div id="week-view">
+    <div class="title">
+      <span>Week View</span>
+      <div class="limit">limit: {{limitLength}}</div>
+    </div>
+    <Simplebar style="height: 550px; width: 98%">
       <div id="visualizationW"></div>
     </Simplebar>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
+import { getWeeks } from '@/api/WeekView'
 import Simplebar from 'simplebar-vue'
 import 'simplebar-vue/dist/simplebar.min.css'
 export default {
   name: 'WeekView',
   data() {
     return {
-      WeekData: []
+      WeekData: [],
+      colors:['#ff7f00', '#377eb8', '#4daf4a'],
+      limitLength: 4
     };
   },
   components: {
     Simplebar
   },
+  computed: {
+    JustClusterData(){
+      return this.$store.state.justClusterData
+    }
+  },
+  async created(){
+    this.getWeekData()
+  },
   async mounted() {
-    // this.getWeekData()
   },
   methods: {
     async getWeekData() {
       // 获取题目数据
-      try {
-        const response = await axios.get('http://localhost:5000/api/week', {
-          params: {
-          }
-        });
-        this.WeekData = response.data;
-        console.log('WeekData:', this.WeekData);
-        this.renderWeekData()
-      } catch (error) {
-        console.error('Failed to fetch Week:', error);
-      }
+      const { data } = await getWeeks()
+      this.WeekData = data
+      this.renderWeekData()
     },
     renderWeekData(){
       // console.log('renderWeekData')
@@ -68,8 +72,8 @@ export default {
       
       // 定义缩放尺
       const weekX = d3.scaleLinear()
-      .domain([0, numWeeks])
-      .range([0, width / 10 * numWeeks])
+      .domain([0, numWeeks + 1])
+      .range([0, width / 10 * (numWeeks - 1)])
       // .padding(0.1)
 
       const studentsY = d3.scaleBand()
@@ -87,20 +91,21 @@ export default {
       g.append('g').call(yAxis)
       
       // 区分x轴,奇数填充为深色列
-      const deepData = [1, 3, 5, 7, 9, 11, 13, 15]
+      const deepData = [1, 3, 5, 7, 9, 11, 13, 15, 17]
       g.selectAll('.deepArea')
       .data(deepData)
       .enter()
       .append('g')
       .append('rect')
         .attr('x', d => weekX(d) - width / 20 )
+        .attr('y', 2)
         .attr('fill', '#F5F5F5')
-        .attr('width', width / 10)
+        .attr('width', width / 12)
         .attr('height', (height / 5) * numStudents)
 
 
       // ------------------每个元素：Bar Radar部分-----------------
-      const radius = 40
+      const radius = width / 24
       const innerRadius = 0.4 * radius
       const outerRadius = radius
       const knowledge = Object.keys(data.students[0].weeks[0].scores)
@@ -124,7 +129,7 @@ export default {
           .padRadius(innerRadius)
       
       const radarData = Object.values(data)[0]
-      // console.log('Ovdata:', radarData)
+      console.log('Ovdata:', radarData)
       const transform =  function(scores){
           return Object.entries(scores).map((d) => {
             return {
@@ -133,17 +138,20 @@ export default {
             }
           })
         }
-      radarData.length = 1
+
+      // 控制
+      radarData.length = this.limitLength
       // console.log(radarData)
       // 对每个学生
       radarData.forEach((s) => {
-        // console.log('s:', s)
+        console.log('s:', s)
         const student_id = s.id
         const student_weeks = s.weeks
-        
+        const kind  = this.JustClusterData[student_id]
+        const student_color = this.colors[kind]
         // 对每一周
         student_weeks.forEach(w => {
-          const position = `translate(${weekX(w.week) + width / 10}, ${studentsY(student_id.slice(-5)) + studentsY.bandwidth() / 2})`
+          const position = `translate(${weekX(w.week) + width / 12}, ${studentsY(student_id.slice(-5)) + studentsY.bandwidth() / 2})`
           const radarChartG = g.append('g')
             .attr('class','radar')
             .attr("transform", position)
@@ -153,7 +161,7 @@ export default {
           .enter()
           .append('g')
           .append("path")
-            .attr('fill', `${'#12e5bf'}`)
+            .attr('fill', `${student_color}`)
             .attr('d', arc)
 
           // console.log('w:', transform(w.scores))
@@ -175,6 +183,10 @@ export default {
             r1: labelInnerRadius,
             r2: labelOuterRadius
           }]
+          const circleMiddleData = [{
+            r1:innerCircleRadius,
+            r2: labelInnerRadius
+          }]
           const circleInnerData = [{
             r1: 0,
             r2: innerCircleRadius
@@ -183,6 +195,9 @@ export default {
             .attr('class','label-circle')
             .attr("transform", position)
           // console.log('labelG', labelG)
+          const labelMG = g.append('g')
+            .attr('class','label-circle')
+            .attr("transform", position)
           const labelG = g.append('g')
             .attr('class','label-circle')
             .attr("transform", position)
@@ -195,6 +210,14 @@ export default {
             .attr('fill', `${'#FFFFFF'}`)
             .attr('d', labelArc)
 
+          labelMG.selectAll('.label-circle')
+          .data(circleMiddleData)
+          .enter()
+          .append('g')
+          .append("path")
+            .attr('fill', `${'#eee'}`)
+            .attr('d', labelArc)
+            
           labelG.selectAll('.label-circle')
           .data(circleInnerData)
           .enter()
@@ -216,13 +239,28 @@ export default {
 <style scoped lang="less">
 #week-view {
   width: 100%;
-  h3{
+  height: 620px;
+  border-radius: 5px;
+  padding-top: 2px;
+  background-color: #fff;
+  .title{
     height: 20px;
-    width: inherit;
-    font-size: 20px;
-    padding: 0 10px 10px;
-    margin: 10px 5px;
+    margin: 10px 0;
+    padding-bottom: 7px;
     border-bottom: 1px solid #ccc;
+    span{
+      height: 20px;
+      width: inherit;
+      font-size: 20px;
+      font-weight: bold;
+      padding-left: 10px;
+      margin: 10px 5px;
+    }
+    .limit{
+      float: right;
+      font-weight: bold;
+      padding-right: 10px;
+    }
   }
 }
 </style>

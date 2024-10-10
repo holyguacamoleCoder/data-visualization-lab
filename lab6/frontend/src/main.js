@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
 import App from './App.vue';
+import store from './store';
 import * as echarts from 'echarts';
 import * as d3 from 'd3';
 import { DropdownMenu, DropdownItem } from 'vant';
@@ -17,4 +18,5 @@ app.config.globalProperties.$d3 = d3;
 // 下拉菜单组件注册
 app.use(DropdownItem);
 app.use(DropdownMenu);
+app.use(store)
 app.mount('#app');
