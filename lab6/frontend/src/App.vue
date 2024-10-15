@@ -6,10 +6,79 @@
     </div>
     <div class="filter">
       <span>Class:  </span>
-      <div class="num">1</div>
-      <!-- <van-dropdown-menu>
-        <van-dropdown-item v-model="selectedClasses" :options="classes" />
-      </van-dropdown-menu> -->
+      <Dropdown>
+        <!-- trigger element -->
+        <template #trigger>
+          <button type="button" style="font-weight: bold">
+            {{displayButton}}
+          </button>
+        </template>
+        <!-- contents display in dropdown -->
+          <form id="checkboxs" name="myForm">
+           <div class="" v-for="(item,index) in CheckoutClasses" :key="index"  
+              style="border-radius: 5px; padding: 5px; width:180px;">
+             <input 
+             type="checkbox"
+             checked
+             style="width: 20px; height: 20px;"
+             :name="item.text"
+             v-model="item.checked"
+             @change="handleCheck">
+             <label
+             style="list-style: none;
+             border-bottom: 1px solid #ccc;
+             margin-top: 5px;
+             display: inline-block;
+             width: 150px;
+             padding-bottom: 8px;
+             font-size: 25px;
+             text-align: center;"
+             >{{ item.text }}</label>
+            </div>
+            
+            <div class="all" style="border-radius: 5px; padding: 5px">
+              <input 
+              name="all"
+              type="checkbox"
+              class="knowledge-list"
+              checked
+              style="width: 20px; height: 20px;"
+              v-model="CheckoutAllClass"
+              @change="handleAllCheck"
+              >
+              <label 
+              for="all"
+              style="list-style: none;
+              border-bottom: 1px solid #ccc;
+              margin-top: 5px;
+              width: 150px;
+              display: inline-block;
+              padding-bottom: 8px;
+              font-size: 25px;
+              text-align: center;"
+              >All</label>
+            </div>
+            <button
+              @click="submitClasses"
+              style="
+                width: 150px; 
+                font-size: 20px;
+                margin-top: 10px;
+                margin-left: 17px;
+                margin-bottom:10px;
+                border-radius: 5px;
+                background-color: #ccc;
+                padding: 5px;
+                color: #fff;
+                font-weight: bold;
+                border: none;
+                cursor: pointer;
+                "
+            >Confirm filter</button>
+          </form>
+          
+          
+      </Dropdown>
     </div>
       
 
@@ -60,50 +129,79 @@ import QuestionView from './components/QuestionView.vue'
 import WeekView from './components/WeekView.vue'
 import StudentView from './components/StudentView.vue'
 import { mapActions, mapGetters } from 'vuex'
+import Dropdown from 'v-dropdown'
+import { filterClasses, getFilter } from './api/App'
 export default {
   components: {
     ScatterView,
     PortraitView,
     QuestionView,
     WeekView,
-    StudentView
+    StudentView,
+    Dropdown
   },
   data() {
     return {
       selectedClasses: 2,
-      classes:[
-        {value: 1, text: 'Class 1'},
-        {value: 2, text: 'Class 2'},
-        {value: 3, text: 'Class 3'},
-        {value: 4, text: 'Class 4'},
-        {value: 5, text: 'Class 5'},
-        {value: 6, text: 'Class 6'},
-        {value: 7, text: 'Class 7'},
-        {value: 8, text: 'Class 8'},
-        {value: 9, text: 'Class 9'},
-        {value: 10, text: 'Class 10'},
-        {value: 11, text: 'Class 11'},
-        {value: 12, text: 'Class 12'},
-        {value: 13, text: 'Class 13'},
-        {value: 14, text: 'Class 14'},
-        {value: 15, text: 'Class 15'},
-      ]
+      CheckoutAllClass: true,
+      CheckoutClasses: []
     }
   },
   computed: {
-    ...mapGetters(['getClusterData', 'getJustClusterData']),
+    ...mapGetters(['getClusterData', 'getJustClusterData', 'getHadFilter']),
     clusterData(){
       return this.$store.state.clusterData
     },
     JustClusterData(){
       return this.$store.state.justClusterData
+    },
+    displayButton(){
+      if(this.CheckoutAllClass) return 'All'
+      if(this.CheckoutClasses.some(item => item.checked)) return 'Part'
+      else return 'none'
     }
   },
-  created() {
+  async created() {
+    // for(let i = 1; i <= 15; i++){
+    //   this.CheckoutClasses.push({checked: false, text: `Class${i}`, id: i})
+    // }
+    // this.CheckoutClasses[0].checked = true
+    const {data} = await getFilter()
+    this.CheckoutClasses =  data
+    this.CheckoutAllClass = false
+  },
+  mounted() {
     this.fetchClusterData()
   },
   methods: {
-    ...mapActions(['fetchClusterData'])
+    ...mapActions(['fetchClusterData', 'toggleHadFilter']),
+    handleCheck(e){
+      console.log(e.target.name)
+      this.CheckoutClasses.checked = !this.CheckoutClasses.checked
+      this.CheckoutAllClass = this.CheckoutClasses.every(item => item.checked)
+      console.log('change!!!')
+    },
+    handleAllCheck(){
+      if(this.CheckoutClasses.every(item => item.checked) || this.CheckoutClasses.every(item => !item.checked))
+        this.CheckoutClasses.forEach(item => item.checked = !item.checked)
+      else{
+        this.CheckoutClasses.forEach(item => item.checked = this.CheckoutAllClass)
+      }
+      // console.log('change!!!')
+    },
+    async submitClasses(e){
+      e.preventDefault()
+      const response = await filterClasses(this.CheckoutClasses)
+      console.log(response.data.data)
+      this.CheckoutClasses = response.data.data
+      this.toggleHadFilter()
+    }
+  },
+  watch: {
+    //监视被选中的学生实例
+    getHadFilter(){
+      // console.log('had filter change!!')
+    }
   }
 };
 </script>
@@ -133,17 +231,24 @@ export default {
     float: right;
     margin-right: 20px;
     margin-top: 10px;
-    width: 170px;
+    width: 180px;
     height: 30px;
     border: none;
     outline: none;
     color: #fff;
     font-size: 20px;
-    .num{
+    .v-dropdown-trigger{
       float: right;
-      text-align: center;
-      width:100px;
-      border-bottom: 1px solid #fff;
+      button{
+        border: 0;
+        width:100px;
+        font-size: 18px;
+        margin-top: 5px;
+        margin-right: 5px;
+        border-radius: 5px;
+        border-bottom: 1px solid #fff;
+        padding: 0;
+      }   
     }
   }
 }

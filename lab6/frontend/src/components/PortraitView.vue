@@ -1,6 +1,7 @@
 <template>
   <div id="portrait-view" style="display: flex; justify-content: space-around;">
     <h3>Portrait View</h3>
+    <!-- <span class="hint">hint: you can choose three kinds of students in ParallelView</span> -->
     <div class="vis-panel">
       <div id="visualization0"></div>
       <div id="visualization1"></div>
@@ -13,16 +14,29 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import { getClusters } from '@/api/PortraitView'
 export default {
   name: 'PortraitView',
   data() {
     return {
-      PortraitData: []
+      PortraitData: [],
+      ourGroup: [],
+      arc: null,
+      hadRender: [],
     };
+  },
+  created(){
+    this.hadRender = [false, false, false]
   },
   async mounted() {
     this.getPortraitData()
+  },
+  computed:{
+    ...mapGetters(['getSelection','getSelectionData', 'getColors','getHadFilter']),
+    SelectionData(){
+      return this.$store.state.getSelectionData
+    },
   },
   methods: {
     async getPortraitData() {
@@ -42,19 +56,17 @@ export default {
         useData.push(this.PortraitData[`${i}`])
       }
       console.log('useData:',useData)
-      const color = ['#ff7f00', '#377eb8', '#4daf4a', '#984ea3', '#e41a1c', '#ff7f00', '#377eb8', '#4daf4a', '#984ea3', '#e41a1c']
       // console.log('color:',color)
       // 渲染三种类型
       useData.forEach((clusterData, i) => {
-
-        const data = Object.entries(clusterData).map((d, i) => {
+        const kind = clusterData.cluster
+        const data = Object.entries(clusterData.knowledge).map((d, i) => {
           return {
             'knowledge': d[0], 
             'value': d[1], 
             'index': i
           }
         })
-        // console.log('data:',data)
         const height = 375
         const width = 375
         const radius = Math.min(height, width) / 2
@@ -67,6 +79,7 @@ export default {
           .attr('height', width)
         const g = svg.append('g')
           .attr('transform', `translate(${center.X}, ${center.Y})`)
+        this.ourGroup[i] = g 
         // console.log('g:',g)
         // 定义角度缩放尺
         const angleX = d3.scaleBand()
@@ -78,7 +91,7 @@ export default {
         .domain([0, 1])
         .range([innerRadius, outerRadius])
         // 定义曲线生成器
-        const arc = d3.arc()
+        this.arc = d3.arc()
             .innerRadius(innerRadius)
             .outerRadius(d => radiusY(d.value))
             .startAngle(d => angleX(d.knowledge))
@@ -132,12 +145,10 @@ export default {
         .data(data)
         .join('g')
         .append('path')
-          .attr('fill', `${color[i]}`)
-          .attr('d', arc)
-          .attr('stroke', 'black')
-          .attr('stroke-width', '2px')
-
-
+          .attr('fill', `${this.getColors[kind]}`)
+          .attr('d', this.arc)
+          // .attr('stroke', 'black')
+          // .attr('stroke-width', '2px')
 
             
       })// forEach-clusterData
@@ -159,7 +170,7 @@ export default {
         .attr('class', 'label-bar')
         .attr('transform', `translate(${labelCenter.X}, ${labelCenter.Y})`)
       const labelData = []
-      const knowledge = Object.keys(this.PortraitData[0])
+      const knowledge = Object.keys(this.PortraitData[0].knowledge)
       
       const str = ['Mastery', 'of', 'knowledge']
       labelG.selectAll('.label-bar')
@@ -208,7 +219,66 @@ export default {
         .attr('font-size', '0.7em')
         .text(d => d)
     },
+    renderSelectData(){
+      // console.log('len',this.getSelectionData.length)
+      if(this.getSelectionData.length < 3) return
+      
+      // 只渲染筛选的三类
 
+      let useData = []
+      for (let i = 0; i < this.getSelectionData.length; i++) {
+        useData.push(this.getSelectionData[`${i}`])
+      }
+      useData.forEach(baseData => {
+        console.log('bd', baseData)
+        const data = Object.entries(baseData.knowledge).map((d, i) => {
+          return {
+            'knowledge': d[0], 
+            'value': d[1], 
+            'index': i
+          }
+        })
+        // console.log('renderSelect', data)
+        const kind = baseData.cluster
+        if(this.hadRender[kind]) {
+          // 如果这个类的图已经被渲染了，那先删除这个图上的元素
+          this.ourGroup[kind].selectAll('.stu').remove()
+        }
+        this.ourGroup[kind]
+        .append('g')
+        .selectAll('path')
+        .data(data)
+        .join('g')
+        .append('path')
+        .attr('class', 'stu')
+        .attr('fill', 'none')
+        .attr('d', this.arc)
+        .attr('stroke', 'black')
+        .attr('stroke-width', '2px')
+        // console.log(want)
+        this.hadRender[kind] = true
+
+        // this.ourGroup[kind].append('text')
+        // .text('6666')
+      })
+    }
+  },//method
+  watch:{
+    getSelection: {
+      handler(){
+        // console.log('chanaaaage!!', newVal, oldVal)
+        this.renderSelectData()
+      },
+      deep:true
+    },
+    getHadFilter(){
+      console.log('had filter change!!')
+      this.$d3.select('#visualization0').selectAll('*').remove()
+      this.$d3.select('#visualization1').selectAll('*').remove()
+      this.$d3.select('#visualization2').selectAll('*').remove()
+      this.$d3.select('#label-bar').selectAll('*').remove()
+      this.getPortraitData()
+    }
   }
 };
 </script>

@@ -34,4 +34,8 @@ lab5：高维非空间数据可视化/ChinaVis2022竞赛题目：交通
 
 lab6：层次和网络可视化和文本可视化/ChinaVis2024竞赛题目I：培训机构
 
+​			下图为完成的样式：
+
+<img src="src/README/4.动态样式演示.png" alt="4.动态样式演示" style="zoom:80%;" />
+
 lab-additional：时序多变量数据可视化/ChinaVis2024竞赛题目II：数据分析公司

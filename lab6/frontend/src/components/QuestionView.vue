@@ -2,16 +2,58 @@
   <div id="question-view" style="padding: 10px;">
     <div class="title">
       <span>Question View</span>
-      <div class="filter">Knowledge: All</div>
+      <Dropdown>
+        <!-- trigger element -->
+        <template #trigger>
+          <button type="button" style="font-weight: bold">
+            {{displayButton}}
+          </button>
+        </template>
+        <!-- contents display in dropdown -->
+          <form id="checkboxs" name="myForm">
+           <div class="selectK" v-for="(item,index) in CheckoutData" :key="index"  style="border-radius: 5px; padding: 5px">
+             <input 
+             type="checkbox"
+             checked
+             :name="item.label"
+             v-model="item.checked"
+             @change="handleCheck">
+             <label
+             style="list-style: none;
+             width: 80px;
+             border-bottom: 1px solid #ccc;
+             margin-top: 5px;
+             padding-bottom: 8px;
+             text-align: center;"
+             >{{ item.label }}</label>
+            </div>
+            
+            <div class="all" style="border-radius: 5px; padding: 5px">
+              <input 
+              name="all"
+              type="checkbox"
+              class="knowledge-list"
+              checked
+              v-model="CheckoutAllData"
+              @change="handleAllCheck"
+              >
+              <label 
+              for="all"
+              style="list-style: none;
+              width: 80px;
+              border-bottom: 1px solid #ccc;
+              margin-top: 5px;
+              padding-bottom: 8px;
+              text-align: center;"
+              >All</label>
+            </div>
+          </form>
+          
+          
+      </Dropdown>
+      <div class="filter">Knowledge:</div>
     </div>
-    <!-- <div class="knowledge-panel" v-for="knowledge,index in QuestionData" :key="index">
-      <text>{{ knowledge[0].knowledge }}</text>
-      <div class="title-panel" v-for="title in knowledge" :key="title.id">
-        <text>{{ 'Q - ' + title.title_id.slice(-5) }}</text>
-        <div class="title-chart"></div>
-        <div class="distribution-chart"></div>
-      </div>
-    </div> -->
+    
     <Simplebar style="height: 550px">
       <div id="visualizationQ"></div>
     </Simplebar>
@@ -20,26 +62,47 @@
 
 <script>
 import { getQuestions } from '@/api/QuestionView'
+import { mapGetters } from 'vuex'
 import Simplebar from 'simplebar-vue'
 import 'simplebar-vue/dist/simplebar.min.css'
+import Dropdown from 'v-dropdown'
 export default {
   name: 'QuestionView',
   components:{
-    Simplebar
+    Simplebar,
+    Dropdown
   },
   data() {
     return {
-      QuestionData: []
+      QuestionData: [],
+      KnowledgeArray: null,
+      CheckoutData: [],
+      CheckoutAllData: true
     };
   },
   async mounted() {
     this.getQuestionData()
+  },
+  computed:{
+    ...mapGetters(['getHadFilter']),
+    displayButton(){
+      if(this.CheckoutAllData) return 'All'
+      if(this.CheckoutData.some(item => item.checked)) return 'Part'
+      else return 'none'
+    }
   },
   methods: {
     async getQuestionData() {
       // 获取问题数据
       const { data } = await getQuestions()
       this.QuestionData = data
+      console.log('Qdata:', data)
+
+      this.KnowledgeArray = Object.keys(data)
+      this.KnowledgeArray.forEach(item => {
+        this.CheckoutData.push({label:item, checked: true})              
+      })
+      // map['all'] = true
       this.renderQuestion()
     },
     // 渲染题目视图数据
@@ -49,11 +112,21 @@ export default {
       const height = 1300
       const margin = { top: 30, right: 20, bottom: 20, left: 20 }
       const innerWidth = width - margin.left - margin.right
-      const innerHeight = height - margin.top - margin.bottom
       const timelineHeight = 50
       const distributionHeight = 30
       const QtitleHeight = 20
-      console.log(innerHeight, innerWidth)
+      const data = Object.entries(this.QuestionData).filter((item) => {
+        const k = item[0]
+        let v = null
+        this.CheckoutData.forEach(iitem => {
+          if(iitem.label === k) {
+            v = iitem.checked
+            return
+          }
+        })
+        return v
+      })
+      console.log('ddd', data)
       // 获取可视化目标容器
       const main = d3.select('#visualizationQ')
       .attr('width', width)
@@ -63,7 +136,7 @@ export default {
           .attr('transform', `translate(${margin.left}, ${margin.top})`)
       // 添加知识点容器
       const knowledgePanel = g.selectAll('.knowledge-panel')
-                  .data(Object.entries(this.QuestionData))
+                  .data(data)
                   .enter()
                   .append('svg')
                   .attr('class', 'knowledge-panel')
@@ -174,7 +247,7 @@ export default {
           .style('left', `${event.pageX + 10}px`)
         })
         .on('mouseout', function() {
-          d3.select(this).attr('r', 0).attr('opacity', 0.2)
+          d3.select(this).attr('r', 2).attr('opacity', 0.2)
           tooltip.style('visibility', 'hidden')
         })
       })
@@ -219,10 +292,39 @@ export default {
       .attr('height', distributionHeight - 10)
       .attr('fill', d => {
         const score = d.score
-        return `rgb(${255 - Math.min(score * 25, 255)}, 0, 0)`
+        return `rgb(${255 - Math.min(score * 20, 255)}, 0, 0)`
       })
       .attr('opacity', 0.5)
-      .attr('rx', 5)
+      .attr('rx', 10)
+    },
+    handleCheck(e){
+      console.log(e.target.name)
+      this.CheckoutData.checked = !this.CheckoutData.checked
+      this.CheckoutAllData = this.CheckoutData.every(item => item.checked)
+      const d3 = this.$d3
+      d3.select('#visualizationQ').selectAll('*').remove();
+      // 重新渲染图表
+      this.renderQuestion()
+      // console.log('change!!!')
+    },
+    handleAllCheck(){
+      if(this.CheckoutData.every(item => item.checked) || this.CheckoutData.every(item => !item.checked))
+        this.CheckoutData.forEach(item => item.checked = !item.checked)
+      else{
+        this.CheckoutData.forEach(item => item.checked = this.CheckoutAllData)
+      }
+      const d3 = this.$d3
+      d3.select('#visualizationQ').selectAll('*').remove();
+      // 重新渲染图表
+      this.renderQuestion()
+      console.log('change!!!')
+    }
+  },
+  watch: {
+    getHadFilter(){
+      // console.log('had filter change!!QQQ')
+      this.$d3.select('#visualizationQ').selectAll('*').remove()
+      this.getQuestionData()
     }
   }
 };
@@ -251,6 +353,17 @@ export default {
       font-size: 17px;
       padding-right: 10px;
     }
+    
+    .v-dropdown-trigger{
+      float: right;
+      button{
+        border: 0;
+        margin-top: 5px;
+        margin-right: 5px;
+        background-color: #fff;
+        padding: 0;
+      }
+    }
   }
     .question {
     margin-bottom: 20px;
@@ -266,5 +379,8 @@ export default {
       background-color: #3b82f6;
     }
   }
+}
+.highlight{
+  color:#3b82f6;
 }
 </style>

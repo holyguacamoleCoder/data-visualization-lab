@@ -18,14 +18,20 @@ def load_data(filename):
     except Exception as e:
         print(f"Error loading data: {e}")
         return None
+
+# 拼接文件为新df
+def contact_data(classList):
+    return pd.concat([load_data(os.path.join(data_dir,'SubmitRecord-' + class_i['text'] + '.csv')) for class_i in classList if class_i['checked']], axis=0)
+
 # 合并数据题目和提交记录
 # filename2: 题目信息文件
-def merge_data(filename1, filename2):
-    df1 = load_data(filename1)
-    df2 = load_data(filename2)
-    merged_data = pd.merge(df1, df2[['title_ID', 'knowledge']], on='title_ID', how='left')
+def merge_data(f1, f2):
+    if isinstance(f1, str):
+        f1 = load_data(f1) 
+    if isinstance(f2, str):
+        f2 = load_data(f2) 
+    merged_data = pd.merge(f1, f2[['title_ID', 'knowledge']], on='title_ID', how='left')
     return merged_data
-
 
 # ------------学生视图部分----------------
 
@@ -38,7 +44,7 @@ def transform_data(df):
     
     # 构建树状图数据结构
     root = {'name': 'Root', 'children': []}
-    
+    # print('df[student_ID]',df['student_ID'])
     students = df['student_ID'].unique()
     print(students[0])
     for student in students:
@@ -185,7 +191,7 @@ def calc_final_scores(after_features_df, groupApply):
     final_scores = grouped.pivot_table(index=index, columns=columns, values='MS')
     # 如果某些学生没有做某些知识点的题目，那么在该知识点上分数为0
     final_scores.fillna(0, inplace=True)
-    print("final_scores:")
+    # print("final_scores:")
     # print(final_scores)
 
     # 对数变换
@@ -231,7 +237,12 @@ def cluster_analysis(students_data, stu=None, every=None):
 
     # 获取聚类中心
     cluster_centers = kmeans.cluster_centers_
-
+    cluster_centers_info = []
+    for i, center in enumerate(cluster_centers):
+        cluster_centers_info.append({
+            "cluster": i,
+            "center": center
+        })
     # 输出聚类中心
     # print("Cluster Centers:")
     # print(cluster_centers)
@@ -265,16 +276,20 @@ def cluster_analysis(students_data, stu=None, every=None):
     
     result = {}
     for i in range(len(cluster_centers)):
-        center = cluster_centers[i]
+        center_score = cluster_centers_info[i]['center']
+        center_cluster = cluster_centers_info[i]['cluster']
         result[str(i)] = {
-        "b3C9s": center[0],
-        "g7R2j": center[1],
-        "k4W1c": center[2],
-        "m3D1v": center[3],
-        "r8S3g": center[4],
-        "s8Y2f": center[5],
-        "t5V9e": center[6],
-        "y9W5d": center[7],
+        "cluster": center_cluster,
+        "knowledge":{
+        "b3C9s": center_score[0],
+        "g7R2j": center_score[1],
+        "k4W1c": center_score[2],
+        "m3D1v": center_score[3],
+        "r8S3g": center_score[4],
+        "s8Y2f": center_score[5],
+        "t5V9e": center_score[6],
+        "y9W5d": center_score[7],
+        }
         }
     return result
 
@@ -293,7 +308,7 @@ def calculate_week_of_year(timestamp, start_date=None):
     - int: 对应的时间戳所在的周数。
     """
     timestamp = pd.to_datetime(timestamp, unit='s')
-    
+    start_timestamp = pd.to_datetime(start_date, unit='s') if start_date else None
     # if start_date is None:
     #     # 如果没有提供起始日期，则查找数据集中最早的日期作为起始日期
     #     min_date = pd.to_datetime(df['timestamp']).min()
@@ -301,7 +316,7 @@ def calculate_week_of_year(timestamp, start_date=None):
     # else:
     #     start_date = pd.to_datetime(start_date)
     
-    delta = (timestamp - start_date).days // 7
+    delta = (timestamp - start_timestamp).days // 7
     return delta
 
 

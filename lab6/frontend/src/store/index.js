@@ -1,11 +1,14 @@
 import { createStore } from 'vuex'
 import { getClusters } from '@/api/WeekView'
 
-
 export default createStore({
   state: {
     clusterData: null,
-    justClusterData: null
+    justClusterData: null,
+    selectedStudentIds: [],
+    selectedStudentData: [],
+    colors: ['#ff7f00', '#377eb8', '#4daf4a'],
+    hadFilter: false
   },
   mutations: {
     setClusterData(state, data) {
@@ -13,6 +16,22 @@ export default createStore({
     },
     setJustClusterData(state, data) {
       state.justClusterData = data
+    },
+    setSelectedStudents(state, student_id){
+      const index = state.selectedStudentIds.indexOf(student_id)
+      if(index === -1){
+        state.selectedStudentIds.push(student_id)
+      }else{
+        state.selectedStudentIds.splice(index, 1)
+      }
+    },
+    setStudentData(state){
+      state.selectedStudentIds.forEach(item =>{
+        state.selectedStudentData.push(state.clusterData[item])
+      })
+    },
+    setHadFilter(state){
+      state.hadFilter = !state.hadFilter
     }
   },
   actions: {
@@ -25,6 +44,16 @@ export default createStore({
       }
       context.commit('setClusterData', data)
       context.commit('setJustClusterData', RData)
+      console.log('clusterData', this.state.clusterData)
+      console.log('justClusterData', this.state.justClusterData)
+    },
+    toggleSelection(context, student_id){
+      context.commit('setSelectedStudents', student_id)
+      context.commit('setStudentData')
+      console.log('selectStudentData', this.state.selectedStudentData)
+    },
+    toggleHadFilter(context){
+      context.commit('setHadFilter')
     }
   },
   getters: {
@@ -33,6 +62,18 @@ export default createStore({
     },
     getJustClusterData(state) {
       return state.justClusterData
+    },
+    getSelection(state){
+      return state.selectedStudentIds
+    },
+    getSelectionData(state){
+      return state.selectedStudentData
+    },
+    getColors(state){
+      return state.colors
+    },
+    getHadFilter(state){
+      return state.hadFilter
     }
   }
 })

@@ -2,7 +2,8 @@
   <div class="scrollBarWrap" id="student-view" data-simplebar>
     <div class="title">
       <span>Student View</span>
-      <div class="filter">Limit: 4</div>
+      <input class="limit-input" type="number" v-model="limitLength" @change="updateLimit" />
+      <div class="filter">Limit: </div>
     </div>
     <Simplebar style="height: 1170px">
       <div id="visualizationS"></div>
@@ -11,6 +12,7 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import { getStudents } from '@/api/StudentView'
 import Simplebar from 'simplebar-vue'
 import 'simplebar-vue/dist/simplebar.min.css'
@@ -23,13 +25,16 @@ export default {
     return {
       treeData: [],
       currentCluster: null,
-      colors:['#ff7f00', '#377eb8', '#4daf4a'],
+      limitLength: 3,
+      // colors:['#ff7f00', '#377eb8', '#4daf4a'],
+      factLength: null
     }
   },
   computed: {
+    ...mapGetters(['getHadFilter', 'getColors']),
     JustClusterData(){
       return this.$store.state.justClusterData
-    }
+    },
   },
   async created(){
     this.getTreeData()
@@ -43,7 +48,7 @@ export default {
     async getTreeData() {
       // 获取学生树形数据
       const { data: { children } }  = await getStudents()
-      // console.log('data',children)
+      console.log('studentData',children)
       this.treeData = children
       this.renderEveryStudents()
     },
@@ -56,7 +61,7 @@ export default {
       const lineLength = 100
       const radius = 5
       const treeWidth = 75
-      const currentColor = this.colors[this.currentCluster]
+      const currentColor = this.getColors[this.currentCluster]
       const studentTitleHeight = 30
 
       
@@ -112,7 +117,7 @@ export default {
       const margin = { top: 20, right: 20, bottom: 20, left: 100 }
       Questions.forEach((q, i) => {
         // 为每棵树定义一个组
-        console.log('q',q)
+        // console.log('q',q)
         q.name = q.name.slice(-5)
         const qg = sg.append('g')
         .attr('transform', `translate(${margin.left}, ${treeWidth * i + studentTitleHeight})`)
@@ -144,8 +149,12 @@ export default {
         .attr('transform', `translate(${margin.left}, ${margin.top + titleHeight})`)
       
       // 对应了1个学生
-      this.treeData.length = 2
-      this.treeData.forEach((s) => {
+      this.factLength = this.treeData.length
+
+      // this.treeData.length = 2
+      this.treeData.forEach((s, i) => {
+        if(i >= this.limitLength) return
+
         // console.log('s',s)
         this.currentCluster = this.JustClusterData[s.name]
         // console.log('this.currentCluster',this.currentCluster)
@@ -153,7 +162,7 @@ export default {
         const studentPanelHeight = studentTitleHeight + treeWidth * s.children.length
         const studentPanel = g.append('svg')
             .attr('class', 'student-panel')
-            .attr('width', width - margin.left - margin.right)
+            .attr('width', width - margin.left - margin.right + 30)
             .attr('height', studentPanelHeight)
             .attr('x', '60')
             .attr('y', (d, i) => i * studentPanelHeight + studentTitleHeight)
@@ -171,14 +180,37 @@ export default {
         
         // 遍历这个s的所有问题
         const Questions = s.children
-        console.log('Questions',Questions)
+        // console.log('Questions',Questions)
         // 每个问题对应一棵树，我们渲染它 
         this.renderQuestions(Questions, sg)
       }) // forEach-s
-
+    },
+    updateLimit(){
+      if(this.limitLength > this.factLength) {
+        this.limitLength = this.factLength
+        return
+      } 
+      if(this.limitLength < 1) {
+        this.limitLength = 1
+        return
+      }
+      // console.log('updateLimit', this.limitLength)
+      // 清除之前的SVG元素
+      const d3 = this.$d3
+      d3.select('#visualizationS').selectAll('*').remove()
+      // 重新渲染图表
+      
+      this.renderEveryStudents()
     }
-  }// methods
-};
+  },//methods
+  watch: {
+    getHadFilter(){
+      console.log('had filter change!!SSS')
+      this.$d3.select('#visualizationS').selectAll('*').remove()
+      this.getTreeData()
+    }
+  }
+}
 </script>
 
 <style scoped lang="less">
@@ -199,9 +231,20 @@ export default {
       float: right;
       margin-right:5px;
     }
+    .limit-input{
+      float: right;
+      width: 30px;
+      height: 22px;
+      text-align: center;
+      line-height: 12px;
+      margin-right: 10px;
+      padding-left: 17px;
+      border: 0;
+      font-weight: bold;
+      border-bottom: 1px solid #000;
+    }
   }
   .student-panel{
-    transform: translate(60px, 0);
     box-shadow:0 0 10px rgba(0, 0, 0, 0.1);
   }
 }

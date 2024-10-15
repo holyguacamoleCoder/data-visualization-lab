@@ -4,42 +4,37 @@
       <span>Parallel View</span>
     </div>
     <div class="labels">
-      <div class="label" v-for="color, i in colors" :key="color">
+      <div class="label" v-for="color, i in getColors" :key="color">
         cluster{{i}}
         <div class="color-box" :style="{ backgroundColor: color }"></div>
       </div>
     </div>
-    <div id="visualization"></div>
+    <div id="visualizationP"></div>
   </div>
 </template>
 
 <script>
-import { mapGetters } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 export default {
   name: 'ScatterView',
   data(){
     return {
-      // clusterData: [],
-      colors:['#ff7f00', '#377eb8', '#4daf4a']
-      // , '#984ea3', '#e41a1c', '#ff7f00', '#377eb8', '#4daf4a', '#984ea3', '#e41a1c']
+      lines: null,
+      // colors:['#ff7f00', '#377eb8', '#4daf4a']
     }
   },
   async mounted() {
     this.renderParallel()
   },
   computed: {
-    ...mapGetters(['getClusterData']),
-    clusterData() {
-      return this.getClusterData
-    }
+    ...mapGetters(['getClusterData', 'getSelection', 'getColors', 'getHadFilter']),
   },
   methods: {
-    
+    ...mapActions(['fetchClusterData', 'toggleSelection']),
     async renderParallel() {
       const d3 = this.$d3
-      // 假设你已经从后端获取了数据，并且数据存储在 this.PortraitData 中
       const data = []
-      const midData = await Object.entries(this.clusterData).map((d) => {
+      const midData = await Object.entries(this.getClusterData).map((d) => {
         return {
           'stu_id': d[0], 
           'cluster': d[1].cluster,
@@ -56,14 +51,14 @@ export default {
       const height = 450
       const width = 350
       const margin = { top: 25, right: 10, bottom: 30, left: 30 }
-      const svg = d3.select("#visualization")
+      const svg = d3.select("#visualizationP")
           .append("svg")
           .attr("width", width)
           .attr("height", height)
       const g = svg.append("g")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
       // 定义颜色
-      const color = this.colors
+      const color = this.getColors
       // 获取维度
       const dimensions = Object.keys(data[0].knowledge)
       // console.log('dimensions:', dimensions)
@@ -84,18 +79,41 @@ export default {
       // 定义坐标轴
       const yAxis = d3.axisLeft(scoreY)
 
+      // 创建tooltip
+      const tooltip = d3.select('#visualizationP').append('div')
+        .attr('class', 'tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden') 
+        .style('background-color', 'white')
+        .style('border', '1px solid black')
+        .style('padding', '5px')
+        .style('z-index', 10)
        // 绘制线
-      g.selectAll('.line')
+      this.lines = g.selectAll('.line-para')
       .data(data)
       .enter()
       .append('path')
-      .attr('class', 'line')
+      .attr('class', 'line-para')
       .attr('d', d => line(d.knowledge))
       .attr('fill', 'none')
       .attr('stroke', d => color[d.cluster])
       .attr('stroke-width', 1.5)
       .attr('opacity', 0.8)
-         
+      .on('click', (e, d) => {
+        console.log('d:', d.stu_id)
+        this.handleLineClick(d)
+        this.updateLines()
+      })
+      .on('mouseover', function(e, d) {
+        // console.log('d:over!!!', d)
+        tooltip.style('visibility', 'visible')
+          .html(`student: ${d.stu_id} <br>cluster: ${d.cluster}`)
+          .style('left', (e.pageX + 10) + 'px')
+          .style('top', (e.pageY + 10) + 'px')
+      })
+      .on('mouseout', function() {
+        tooltip.style('visibility', 'hidden')
+      })
       // 绘制坐标轴
       g.selectAll('.axis')
       .data(dimensions)
@@ -113,6 +131,36 @@ export default {
         .style('text-anchor', 'middle')
         .text(d => d)
         .style('fill', 'black')
+    },
+    handleLineClick(d){
+      this.toggleSelection(d.stu_id)
+    },
+    updateLines(){
+      // console.log('line', this.lines)
+      this.lines
+        .style('opacity', 0.7)
+      this.lines
+        .classed('selected', d => this.getSelection.includes(d.stu_id))
+        .style('stroke-width', d => this.getSelection.includes(d.stu_id) ? 5 : 1)
+        .style('stroke-linecap', 'round')
+        .style('stroke-linejoin', 'round')
+        .style('opacity', d => this.getSelection.includes(d.stu_id)? 1 : 0.7)
+      }
+  },
+  watch: {
+    //监视被选中的学生实例
+    getSelection:{
+      handler(){
+        // console.log('change!!')
+        // this.updateLines()
+      },
+      deep: true
+    },
+    async getHadFilter(){
+      console.log('had filter change!!PPPP')
+      this.$d3.select('#visualizationP').selectAll('*').remove()
+      await this.fetchClusterData()      
+      this.renderParallel()
     }
   }
 };
@@ -166,6 +214,27 @@ export default {
     margin: 20px;
     padding: 0 20px 20px 0;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    .axis{
+      pointer-events: none;
+    }
+    path{
+      z-index:5;
+      .selected{
+        stroke: #000;
+        stroke-width: 5px;
+      }
+      .selected::before{
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-color: transparent;
+        border: 1px solid #000;
+        box-sizing: border-box;
+        pointer-events: none;
+      }
+    }
   }
 }
+
 </style>

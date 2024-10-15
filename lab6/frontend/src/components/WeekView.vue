@@ -2,7 +2,8 @@
   <div id="week-view">
     <div class="title">
       <span>Week View</span>
-      <div class="limit">limit: {{limitLength}}</div>
+      <input class="limit-input" type="number" v-model="limitLength" @change="updateLimit" />
+      <div class="limit">limit:</div>
     </div>
     <Simplebar style="height: 550px; width: 98%">
       <div id="visualizationW"></div>
@@ -12,6 +13,7 @@
 
 <script>
 import { getWeeks } from '@/api/WeekView'
+import { mapGetters } from 'vuex'
 import Simplebar from 'simplebar-vue'
 import 'simplebar-vue/dist/simplebar.min.css'
 export default {
@@ -19,28 +21,34 @@ export default {
   data() {
     return {
       WeekData: [],
-      colors:['#ff7f00', '#377eb8', '#4daf4a'],
-      limitLength: 4
+      // colors:['#ff7f00', '#377eb8', '#4daf4a'],
+      limitLength: 4,
+      factLength: null
     };
   },
   components: {
     Simplebar
   },
   computed: {
+    ...mapGetters(['getHadFilter','getColors']),
     JustClusterData(){
       return this.$store.state.justClusterData
-    }
+    },
   },
   async created(){
     this.getWeekData()
   },
   async mounted() {
   },
+  update(){
+    
+  },
   methods: {
     async getWeekData() {
       // 获取题目数据
       const { data } = await getWeeks()
       this.WeekData = data
+      console.log('WeekData', this.WeekData)
       this.renderWeekData()
     },
     renderWeekData(){
@@ -129,7 +137,7 @@ export default {
           .padRadius(innerRadius)
       
       const radarData = Object.values(data)[0]
-      console.log('Ovdata:', radarData)
+      // console.log('Ovdata:', radarData)
       const transform =  function(scores){
           return Object.entries(scores).map((d) => {
             return {
@@ -140,15 +148,16 @@ export default {
         }
 
       // 控制
-      radarData.length = this.limitLength
+      this.factLength = radarData.length
       // console.log(radarData)
       // 对每个学生
-      radarData.forEach((s) => {
-        console.log('s:', s)
+      radarData.forEach((s, i) => {
+        if(i >= this.limitLength) return
+        // console.log('s:', s)
         const student_id = s.id
         const student_weeks = s.weeks
         const kind  = this.JustClusterData[student_id]
-        const student_color = this.colors[kind]
+        const student_color = this.getColors[kind]
         // 对每一周
         student_weeks.forEach(w => {
           const position = `translate(${weekX(w.week) + width / 12}, ${studentsY(student_id.slice(-5)) + studentsY.bandwidth() / 2})`
@@ -231,6 +240,28 @@ export default {
 
       }) // forEach.s
       
+    },
+    updateLimit(){
+      if(this.limitLength > this.factLength) {
+        this.limitLength = this.factLength
+        return
+      } 
+      if(this.limitLength < 1) {
+        this.limitLength = 1
+        return
+      }
+      // console.log('updateLimit', this.limitLength)
+      // 清除之前的SVG元素
+      const d3 = this.$d3
+      d3.select('#visualizationW').selectAll('*').remove();
+      // 重新渲染图表
+      this.renderWeekData()
+    }
+  },
+  watch: {
+    getHadFilter(){
+      this.$d3.select('#visualizationW').selectAll('*').remove()
+      this.getWeekData()
     }
   }
 };
@@ -260,6 +291,18 @@ export default {
       float: right;
       font-weight: bold;
       padding-right: 10px;
+    }
+    .limit-input{
+      float: right;
+      width: 30px;
+      height: 18px;
+      text-align: center;
+      line-height: 15px;
+      margin-right: 10px;
+      padding-left: 17px;
+      border: 0;
+      font-weight: bold;
+      border-bottom: 1px solid #000;
     }
   }
 }
