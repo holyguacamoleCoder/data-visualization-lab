@@ -1,0 +1,58 @@
+{
+  "id": "4724491",
+  "name": "China2023",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "数据可视化实验lab5交通数据",
+  "glyphs": [
+    {
+      "icon_id": "12103028",
+      "name": "筛选",
+      "font_class": "shaixuan",
+      "unicode": "e61d",
+      "unicode_decimal": 58909
+    },
+    {
+      "icon_id": "1388117",
+      "name": "loading",
+      "font_class": "loading",
+      "unicode": "e614",
+      "unicode_decimal": 58900
+    },
+    {
+      "icon_id": "98510",
+      "name": "分析",
+      "font_class": "weibiaoti1",
+      "unicode": "e624",
+      "unicode_decimal": 58916
+    },
+    {
+      "icon_id": "7577326",
+      "name": "24gf-appsSelect",
+      "font_class": "appsSelect",
+      "unicode": "e9c0",
+      "unicode_decimal": 59840
+    },
+    {
+      "icon_id": "25856350",
+      "name": "继续",
+      "font_class": "jixu",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "2077541",
+      "name": "刷新",
+      "font_class": "shuaxin",
+      "unicode": "e63d",
+      "unicode_decimal": 58941
+    },
+    {
+      "icon_id": "26082667",
+      "name": "暂停",
+      "font_class": "zanting1",
+      "unicode": "e62a",
+      "unicode_decimal": 58922
+    }
+  ]
+}

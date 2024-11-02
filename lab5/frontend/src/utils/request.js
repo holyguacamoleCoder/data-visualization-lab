@@ -1,7 +1,7 @@
 import axios from 'axios'
 const instance = axios.create({
   baseURL: 'http://localhost:5000/api/',
-  timeout: 40000
+  timeout: 200000
 })
 
 // 自定义配置
